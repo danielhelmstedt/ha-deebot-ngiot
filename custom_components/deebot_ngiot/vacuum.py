@@ -1,12 +1,13 @@
 """Support for Ecovacs vacuums using the NGIOT endpoint."""
 
 import asyncio
-from collections.abc import Mapping
 import logging
+from collections.abc import Mapping
 from time import monotonic
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any, cast, override
 
-from deebot_client.capabilities import Capabilities, DeviceType
+from deebot_client.capabilities import Capabilities as ClientCapabilities
+from deebot_client.capabilities import DeviceType
 from deebot_client.device import Device
 from deebot_client.events import (
     CachedMapInfoEvent,
@@ -16,7 +17,6 @@ from deebot_client.events import (
 )
 from deebot_client.events.map import Map
 from deebot_client.models import CleanAction, CleanMode, State
-
 from homeassistant.components.vacuum import (
     Segment,
     StateVacuumEntity,
@@ -25,12 +25,15 @@ from homeassistant.components.vacuum import (
     VacuumEntityFeature,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import slugify
+from probatio import In, Required
 
-from . import NgiotConfigEntry
-from .entity import NgiotEntity
-from .util import get_name_key
+from . import ConfigEntry
+from .const import CONSUMABLES, FAN_SPEED_TO_FAN_MODE
+from .controller import Capabilities
+from .entity import Entity
 
 _LOGGER = logging.getLogger(__name__)
 _SEGMENTS_SEPARATOR = "_"
@@ -45,6 +48,8 @@ _STATE_TO_VACUUM_STATE = {
 }
 
 _ATTR_ROOMS = "rooms"
+_ATTR_CONSUMABLE = "consumable"
+SERVICE_RESET_CONSUMABLE = "reset_consumable"
 
 _RETURN_TO_DOCK_REFRESH_INTERVAL = 30
 _RETURN_TO_DOCK_FALLBACK_TIMEOUT = 20 * 60
@@ -52,20 +57,26 @@ _RETURN_TO_DOCK_FALLBACK_TIMEOUT = 20 * 60
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: NgiotConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the vacuums."""
     controller = config_entry.runtime_data
     async_add_entities(
-        NgiotVacuum(device)
+        Vacuum(device)
         for device in controller.devices
         if device.capabilities.device_type is DeviceType.VACUUM
     )
 
+    entity_platform.async_get_current_platform().async_register_entity_service(
+        SERVICE_RESET_CONSUMABLE,
+        {Required(_ATTR_CONSUMABLE): In(list(CONSUMABLES))},
+        "async_reset_consumable",
+    )
 
-class NgiotVacuum(
-    NgiotEntity[Capabilities],
+
+class Vacuum(
+    Entity[ClientCapabilities],
     StateVacuumEntity,
 ):
     """Vacuum."""
@@ -81,7 +92,7 @@ class NgiotVacuum(
     )
 
     entity_description = StateVacuumEntityDescription(
-        key="vacuum", translation_key="vacuum", name=None
+        key="vacuum", translation_key="vacuum", name=None, entity_category=None
     )
 
     def __init__(self, device: Device) -> None:
@@ -95,7 +106,7 @@ class NgiotVacuum(
         if fan_speed := self._capability.fan_speed:
             self._attr_supported_features |= VacuumEntityFeature.FAN_SPEED
             self._attr_fan_speed_list = [
-                get_name_key(level) for level in fan_speed.types
+                FAN_SPEED_TO_FAN_MODE[level] for level in fan_speed.types
             ]
 
         if self._capability.map and self._capability.clean.action.area:
@@ -123,7 +134,7 @@ class NgiotVacuum(
         if self._capability.fan_speed:
 
             async def on_fan_speed(event: FanSpeedEvent) -> None:
-                self._attr_fan_speed = get_name_key(event.speed)
+                self._attr_fan_speed = FAN_SPEED_TO_FAN_MODE[event.speed]
                 self.async_write_ha_state()
 
             self._subscribe(self._capability.fan_speed.event, on_fan_speed)
@@ -176,7 +187,17 @@ class NgiotVacuum(
         """Set fan speed."""
         if TYPE_CHECKING:
             assert self._capability.fan_speed
-        await self._device.execute_command(self._capability.fan_speed.set(fan_speed))
+        speed = next(
+            (
+                level
+                for level, mode in FAN_SPEED_TO_FAN_MODE.items()
+                if mode == fan_speed
+            ),
+            None,
+        )
+        if speed is None:
+            raise ValueError(f"Unsupported fan speed: {fan_speed}")
+        await self._device.execute_command(self._capability.fan_speed.set(speed))
 
     @override
     async def async_return_to_base(self, **kwargs: Any) -> None:
@@ -196,6 +217,13 @@ class NgiotVacuum(
         """Stop the vacuum cleaner."""
         self._cancel_return_to_dock_monitor()
         await self._clean_command(CleanAction.STOP)
+
+    async def async_reset_consumable(self, consumable: str) -> None:
+        """Reset the usage counter of a consumable."""
+        capability = cast(Capabilities, self._capability)
+        await self._device.execute_command(
+            capability.reset_consumable.execute(consumable)
+        )
 
     @override
     async def async_locate(self, **kwargs: Any) -> None:

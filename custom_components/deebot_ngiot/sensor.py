@@ -7,7 +7,6 @@ from typing import Any, override
 from deebot_client.capabilities import CapabilityEvent
 from deebot_client.events import BatteryEvent
 from deebot_client.events.base import Event
-
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -19,29 +18,25 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
-from . import NgiotConfigEntry
-from .entity import NgiotCapabilityEntityDescription, NgiotDescriptionEntity
-from .ngiot.events import StatusEvent
-from .ngiot.hardware import status_capability
-from .util import get_supported_entities
+from . import ConfigEntry
+from .commands import StatusEvent
+from .controller import status_capability
+from .entity import (
+    CapabilityEntityDescription,
+    DescriptionEntity,
+    get_supported_entities,
+)
 
 
 @dataclass(kw_only=True, frozen=True)
-class NgiotSensorEntityDescription[EventT: Event](
+class SensorDescription[EventT: Event](
     SensorEntityDescription,
-    NgiotCapabilityEntityDescription,
+    CapabilityEntityDescription,
 ):
     """Class describing sensor entity."""
 
     value_fn: Callable[[EventT], StateType]
     attributes_fn: Callable[[EventT], Mapping[str, Any] | None] | None = None
-
-
-def _status_value(key: str) -> Callable[[StatusEvent], StateType]:
-    def value(event: StatusEvent) -> StateType:
-        return event.data.get(key)
-
-    return value
 
 
 def _consumable(
@@ -64,7 +59,9 @@ def _consumable(
         return item["left"] if (item := find(event)) else None
 
     def attributes(event: StatusEvent) -> Mapping[str, Any] | None:
-        return {"total": item.get("total")} if (item := find(event)) else None
+        if not (item := find(event)):
+            return None
+        return {"total": item.get("total")}
 
     return value, attributes
 
@@ -74,113 +71,177 @@ def _status_description(
     *,
     translation_key: str,
     unit: str | None = None,
+    suggested_unit_of_measurement: str | None = None,
+    suggested_display_precision: int | None = None,
     device_class: SensorDeviceClass | None = None,
     state_class: SensorStateClass | None = None,
-) -> NgiotSensorEntityDescription[StatusEvent]:
-    return NgiotSensorEntityDescription[StatusEvent](
+    entity_category: EntityCategory | None,
+) -> SensorDescription[StatusEvent]:
+    return SensorDescription[StatusEvent](
         capability_fn=status_capability,
-        value_fn=_status_value(key),
+        value_fn=lambda event: event.data.get(key),
         key=key,
         translation_key=translation_key,
         native_unit_of_measurement=unit,
+        suggested_unit_of_measurement=suggested_unit_of_measurement,
+        suggested_display_precision=suggested_display_precision,
         device_class=device_class,
         state_class=state_class,
+        entity_category=entity_category,
     )
 
 
 def _consumable_description(
-    kind: str, translation_key: str
-) -> NgiotSensorEntityDescription[StatusEvent]:
+    kind: str, translation_key: str,
+    *, 
+    unit: str | None = None,
+    suggested_unit_of_measurement: str | None = None,
+    device_class: SensorDeviceClass | None = None,
+    state_class: SensorStateClass | None = None,
+    entity_category: EntityCategory | None
+) -> SensorDescription[StatusEvent]:
     value_fn, attributes_fn = _consumable(kind)
-    return NgiotSensorEntityDescription[StatusEvent](
+    return SensorDescription[StatusEvent](
         capability_fn=status_capability,
         value_fn=value_fn,
         attributes_fn=attributes_fn,
         key=f"consumable_{kind}",
         translation_key=translation_key,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=unit,
+        suggested_unit_of_measurement=suggested_unit_of_measurement,
+        device_class=device_class,
+        state_class=state_class,
+        entity_category=entity_category,
     )
 
 
-ENTITY_DESCRIPTIONS: tuple[NgiotSensorEntityDescription, ...] = (
-    NgiotSensorEntityDescription[BatteryEvent](
+ENTITY_DESCRIPTIONS: tuple[SensorDescription, ...] = (
+    SensorDescription[BatteryEvent](
         capability_fn=lambda caps: caps.battery,
         value_fn=lambda e: e.value,
         key="battery",
         device_class=SensorDeviceClass.BATTERY,
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
+        entity_category=None
     ),
     _status_description(
         "cleanArea",
         translation_key="stats_area",
         unit=UnitOfArea.SQUARE_METERS,
+        suggested_display_precision=0,
         device_class=SensorDeviceClass.AREA,
         state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC
     ),
     _status_description(
         "cleanTime",
         translation_key="stats_time",
         unit=UnitOfTime.MINUTES,
+        suggested_unit_of_measurement=UnitOfTime.HOURS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
+        entity_category=None,
     ),
     _status_description(
         "cleanCount",
         translation_key="stats_cleanings",
         state_class=SensorStateClass.TOTAL_INCREASING,
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     _status_description(
         "cleanAreaTotal",
         translation_key="total_stats_area",
         unit=UnitOfArea.SQUARE_METERS,
+        suggested_display_precision=0,
         device_class=SensorDeviceClass.AREA,
         state_class=SensorStateClass.TOTAL_INCREASING,
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     _status_description(
         "cleanCountTotal",
         translation_key="total_stats_cleanings",
         state_class=SensorStateClass.TOTAL_INCREASING,
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     _status_description(
         "cleanTimeTotal",
         translation_key="total_stats_time",
         unit=UnitOfTime.MINUTES,
+        suggested_unit_of_measurement=UnitOfTime.HOURS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL_INCREASING,
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    _status_description("workMode", translation_key="work_mode"),
-    _status_description("waterMode", translation_key="water_mode"),
-    _status_description("mopState", translation_key="mop_state"),
-    _status_description("unitSet", translation_key="unit_set"),
-    _consumable_description("sideBrush", "lifespan_side_brush"),
-    _consumable_description("rollBrush", "lifespan_roll_brush"),
-    _consumable_description("filter", "lifespan_filter"),
-    _consumable_description("unitCare", "lifespan_unit_care"),
+    _status_description(
+        "workMode",
+        translation_key="work_mode",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    _status_description(
+        "unitSet",
+        translation_key="unit_set",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    _consumable_description(
+        "sideBrush",
+        translation_key="lifespan_side_brush", 
+        unit=UnitOfTime.MINUTES,
+        suggested_unit_of_measurement=UnitOfTime.HOURS,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    _consumable_description(
+        "rollBrush",
+        translation_key="lifespan_roll_brush",
+        unit=UnitOfTime.MINUTES,
+        suggested_unit_of_measurement=UnitOfTime.HOURS,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    _consumable_description(
+        "filter",
+        translation_key="lifespan_filter",
+        unit=UnitOfTime.MINUTES,
+        suggested_unit_of_measurement=UnitOfTime.HOURS,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    _consumable_description(
+        "unitCare",
+        translation_key="lifespan_unit_care",
+        unit=UnitOfTime.MINUTES,
+        suggested_unit_of_measurement=UnitOfTime.HOURS,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
 )
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: NgiotConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Add entities for passed config_entry in HA."""
     async_add_entities(
         get_supported_entities(
-            config_entry.runtime_data, NgiotSensor, ENTITY_DESCRIPTIONS
+            config_entry.runtime_data, Sensor, ENTITY_DESCRIPTIONS
         )
     )
 
 
-class NgiotSensor[EventT: Event](
-    NgiotDescriptionEntity[CapabilityEvent[EventT]],
+class Sensor[EventT: Event](
+    DescriptionEntity[CapabilityEvent[EventT]],
     SensorEntity,
 ):
     """Sensor."""
 
-    entity_description: NgiotSensorEntityDescription
+    entity_description: SensorDescription
 
     @override
     async def async_added_to_hass(self) -> None:

@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a problem with the Ecovacs NGIOT Home Assistant integration
+description: Report a problem with the Ecovacs Deebot NGIOT Home Assistant integration
 title: "[Bug]: "
 labels: [bug]
 body:
@@ -12,14 +12,14 @@ body:
     id: ha_version
     attributes:
       label: Home Assistant version
-      placeholder: "2026.7.0"
+      placeholder: "2026.9.0"
     validations:
       required: true
   - type: input
     id: integration_version
     attributes:
       label: Integration version
-      placeholder: "0.1.0"
+      placeholder: "1.0.0"
     validations:
       required: true
   - type: dropdown
@@ -27,9 +27,9 @@ body:
     attributes:
       label: Vacuum model
       options:
-        - DEEBOT NEO 2.0
-        - DEEBOT NEO 2.0 PLUS
-        - Other q287s6 device
+        - DEEBOT NEO 2.0 (eyfj07)
+        - DEEBOT NEO 2.0 PLUS (q287s6)
+        - Other
     validations:
       required: true
   - type: textarea
@@ -53,7 +53,7 @@ body:
     id: logs
     attributes:
       label: Debug logs
-      description: Include sanitized logs from custom_components.deebot_neo_2 with debug logging enabled.
+      description: Include sanitized logs from custom_components.deebot_ngiot with debug logging enabled.
       render: text
     validations:
       required: false
@@ -62,6 +62,6 @@ body:
     attributes:
       label: Checklist
       options:
-        - label: I enabled debug logging for custom_components.deebot_neo_2.
+        - label: I enabled debug logging for custom_components.deebot_ngiot.
         - label: I removed secrets, account details, tokens, device IDs, and local paths from the logs.
-        - label: I confirmed my device class is q287s6.
+        - label: I confirmed my device class is supported.
