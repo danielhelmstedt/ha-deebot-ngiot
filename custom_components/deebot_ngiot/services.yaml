@@ -10,7 +10,7 @@ reset_consumable:
         select:
           translation_key: consumable
           options:
-            - sideBrush
-            - rollBrush
+            - side_brush
+            - roll_brush
             - filter
-            - unitCare
+            - unit_care

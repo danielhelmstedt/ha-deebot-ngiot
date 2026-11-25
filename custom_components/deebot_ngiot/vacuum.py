@@ -70,7 +70,16 @@ async def async_setup_entry(
 
     entity_platform.async_get_current_platform().async_register_entity_service(
         SERVICE_RESET_CONSUMABLE,
-        {Required(_ATTR_CONSUMABLE): In(list(CONSUMABLES))},
+        {
+            Required(_ATTR_CONSUMABLE): In(
+                list(CONSUMABLES)
+                + [
+                    api_value
+                    for api_value, _ in CONSUMABLES.values()
+                    if api_value not in CONSUMABLES
+                ]
+            )
+        },
         "async_reset_consumable",
     )
 
@@ -220,6 +229,10 @@ class Vacuum(
 
     async def async_reset_consumable(self, consumable: str) -> None:
         """Reset the usage counter of a consumable."""
+        if consumable in CONSUMABLES:
+            consumable = CONSUMABLES[consumable][0]
+        elif consumable not in (api_value for api_value, _ in CONSUMABLES.values()):
+            raise ValueError(f"Unsupported consumable: {consumable}")
         capability = cast(Capabilities, self._capability)
         await self._device.execute_command(
             capability.reset_consumable.execute(consumable)

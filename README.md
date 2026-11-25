@@ -25,8 +25,7 @@ Models that work with Home Assistant's built-in Ecovacs integration are not supp
 - Clean selected rooms on the currently active map.
 - View battery, cleaning statistics, consumable life, and other status sensors from live updates and status responses.
 - Adjust supported settings: child lock, do-not-disturb, auto resume, carpet boost, and speaker volume.
-- Reset the filter, main brush, side brush, and unit-care counters with the `deebot_ngiot.reset_consumable` service (consumable: `filter`, `rollBrush`, `sideBrush` or `unitCare`).
-- View dormant and relocation-mode status.
+- Reset the filter, main brush, side brush, and unit-care counters with the `deebot_ngiot.reset_consumable` service (consumable: `filter`, `roll_brush`, `side_brush` or `unit_care`).
 
 ## Limitations
 
