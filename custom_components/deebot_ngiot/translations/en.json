@@ -192,9 +192,9 @@
     "consumable": {
       "options": {
         "filter": "Filter",
-        "rollBrush": "Main brush",
-        "sideBrush": "Side brush",
-        "unitCare": "Unit care"
+        "roll_brush": "Main brush",
+        "side_brush": "Side brush",
+        "unit_care": "Unit care"
       }
     }
   },

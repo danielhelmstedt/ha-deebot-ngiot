@@ -121,9 +121,9 @@ def status_capability(
 
 
 def _reset_life_span(life_span: LifeSpan) -> Command:
-    for consumable, name in CONSUMABLES.items():
-        if name == life_span.name:
-            return ResetConsumable(consumable)
+    for api_value, member in CONSUMABLES.values():
+        if member == life_span:
+            return ResetConsumable(api_value)
     raise ValueError(f"Unsupported consumable {life_span.name}")
 
 

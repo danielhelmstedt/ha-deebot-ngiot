@@ -1,6 +1,6 @@
 """Constants for the Ecovacs NGIOT integration."""
 
-from deebot_client.events import FanSpeedLevel
+from deebot_client.events import FanSpeedLevel, LifeSpan
 
 DOMAIN = "deebot_ngiot"
 
@@ -81,11 +81,10 @@ STATUS_FIELDS = (
     "error",
 )
 
-# Consumable key -> deebot_client LifeSpan member name
 CONSUMABLES = {
-    "sideBrush": "SIDE_BRUSH",
-    "rollBrush": "BRUSH",
-    "filter": "FILTER",
-    "unitCare": "UNIT_CARE",
+    "side_brush": ("sideBrush", LifeSpan.SIDE_BRUSH),
+    "roll_brush": ("rollBrush", LifeSpan.BRUSH),
+    "filter": ("filter", LifeSpan.FILTER),
+    "unit_care": ("unitCare", LifeSpan.UNIT_CARE),
 }
 
