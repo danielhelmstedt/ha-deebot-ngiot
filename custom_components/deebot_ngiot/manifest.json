@@ -1,0 +1,13 @@
+{
+  "domain": "deebot_ngiot",
+  "name": "Ecovacs Deebot NGIOT",
+  "categories": ["appliances_cleaning.cleaning"],
+  "codeowners": ["@danielhelmstedt"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/danielhelmstedt/ha-deebot-ngiot",
+  "iot_class": "cloud_push",
+  "issue_tracker": "https://github.com/danielhelmstedt/ha-deebot-ngiot/issues",
+  "requirements": ["deebot-client>=18.7.0"],
+  "version": "1.0.0"
+}

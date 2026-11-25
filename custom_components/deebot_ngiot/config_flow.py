@@ -1,9 +1,12 @@
 """Config flow."""
 
-from collections.abc import Mapping
 import logging
+import random
+import string
+from collections.abc import Mapping
 from typing import Any
 
+import probatio
 from aiohttp import ClientError
 from deebot_client.api_client import ApiClient
 from deebot_client.authentication import Authenticator, create_rest_config
@@ -16,9 +19,8 @@ from deebot_client.exceptions import (
 )
 from deebot_client.mqtt_client import MqttClient, create_mqtt_config
 from deebot_client.util import md5
-import probatio
-
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from homeassistant.config_entries import ConfigFlow as BaseConfigFlow
 from homeassistant.const import (
     CONF_COUNTRY,
     CONF_DEVICE_ID,
@@ -30,9 +32,17 @@ from homeassistant.helpers import aiohttp_client, selector
 
 from .const import CONF_DEVICE_DID, CONF_VERIFICATION_CODE, DOMAIN
 from .controller import is_ngiot_candidate
-from .util import get_client_device_id
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def get_client_device_id(config: Mapping[str, Any]) -> str:
+    """Get the stored client device id or generate a new one."""
+    if device_id := config.get(CONF_DEVICE_ID):
+        return str(device_id)
+    return "".join(
+        random.choice(string.ascii_uppercase + string.digits) for _ in range(8)
+    )
 
 
 def _device_label(info: Mapping[str, Any]) -> str:
@@ -105,7 +115,7 @@ async def _find_devices(
     return found, {} if found else {"base": "no_supported_vacuums"}
 
 
-class NgiotConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(BaseConfigFlow, domain=DOMAIN):
     """Handle a config flow."""
 
     VERSION = 1

@@ -45,30 +45,46 @@
       "dormant": {
         "name": "Dormant"
       },
+      "mop_state": {
+        "name": "Mop Installed"
+      },
       "relocation_mode": {
         "name": "Relocation Mode"
-      }
-    },
-    "button": {
-      "reset_filter": {
-        "name": "Reset Filter Count"
-      },
-      "reset_roll_brush": {
-        "name": "Reset Main Brush Count"
-      },
-      "reset_side_brush": {
-        "name": "Reset Side Brush Count"
-      },
-      "reset_unit_care": {
-        "name": "Reset Robot Maintenance Count"
       }
     },
     "image": {
       "map": {
         "name": "Map",
         "state_attributes": {
+          "current_room": {
+            "name": "Current Room"
+          },
+          "current_room_id": {
+            "name": "Current Room ID"
+          },
+          "height": {
+            "name": "Height"
+          },
+          "map_id": {
+            "name": "Map ID"
+          },
+          "map_name": {
+            "name": "Map Name"
+          },
+          "path_length": {
+            "name": "Path Length"
+          },
+          "resolution": {
+            "name": "Resolution"
+          },
           "robot_position": {
             "name": "Robot Position"
+          },
+          "rooms": {
+            "name": "Rooms"
+          },
+          "width": {
+            "name": "Width"
           }
         }
       }
@@ -76,6 +92,16 @@
     "number": {
       "volume": {
         "name": "Volume"
+      }
+    },
+    "select": {
+      "water_mode": {
+        "name": "Water Mode",
+        "state": {
+          "high": "High",
+          "low": "Low",
+          "medium": "Medium"
+        }
       }
     },
     "sensor": {
@@ -90,9 +116,6 @@
       },
       "lifespan_unit_care": {
         "name": "Unit Care"
-      },
-      "mop_state": {
-        "name": "Mop State"
       },
       "stats_area": {
         "name": "Area Cleaned"
@@ -114,9 +137,6 @@
       },
       "unit_set": {
         "name": "Unit Settings"
-      },
-      "water_mode": {
-        "name": "Water Level"
       },
       "work_mode": {
         "name": "Work Mode"
@@ -141,15 +161,51 @@
         "state_attributes": {
           "fan_speed": {
             "state": {
-              "max": "Max",
-              "max_plus": "Max+",
-              "normal": "Normal",
-              "quiet": "Quiet"
+              "quiet": "Quiet",
+              "auto": "Standard",
+              "strong": "Strong",
+              "max": "Max"
             }
           },
           "rooms": {
             "name": "Rooms"
           }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "device_verification_required": {
+      "message": "Device verification is required. Re-authenticate to continue."
+    },
+    "invalid_auth": {
+      "message": "The Ecovacs credentials are invalid."
+    },
+    "no_matching_device": {
+      "message": "No matching vacuum was found on this account."
+    },
+    "setup_error": {
+      "message": "An error occurred while setting up the vacuum."
+    }
+  },
+  "selector": {
+    "consumable": {
+      "options": {
+        "filter": "Filter",
+        "rollBrush": "Main brush",
+        "sideBrush": "Side brush",
+        "unitCare": "Unit care"
+      }
+    }
+  },
+  "services": {
+    "reset_consumable": {
+      "name": "Reset consumable counter",
+      "description": "Resets the usage counter of a consumable after you have replaced or cleaned it.",
+      "fields": {
+        "consumable": {
+          "name": "Consumable",
+          "description": "The consumable whose counter should be reset."
         }
       }
     }

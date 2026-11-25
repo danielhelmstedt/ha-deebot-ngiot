@@ -7,21 +7,23 @@ from typing import override
 from deebot_client.capabilities import CapabilitySet
 from deebot_client.events import VolumeEvent
 from deebot_client.events.base import Event
-
 from homeassistant.components.number import NumberEntity, NumberEntityDescription
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from . import NgiotConfigEntry
-from .entity import NgiotCapabilityEntityDescription, NgiotDescriptionEntity
-from .util import get_supported_entities
+from . import ConfigEntry
+from .entity import (
+    CapabilityEntityDescription,
+    DescriptionEntity,
+    get_supported_entities,
+)
 
 
 @dataclass(kw_only=True, frozen=True)
-class NgiotNumberEntityDescription[EventT: Event](
+class NumberDescription[EventT: Event](
     NumberEntityDescription,
-    NgiotCapabilityEntityDescription,
+    CapabilityEntityDescription,
 ):
     """Class describing number entity."""
 
@@ -29,8 +31,8 @@ class NgiotNumberEntityDescription[EventT: Event](
     value_fn: Callable[[EventT], float | None]
 
 
-ENTITY_DESCRIPTIONS: tuple[NgiotNumberEntityDescription, ...] = (
-    NgiotNumberEntityDescription[VolumeEvent](
+ENTITY_DESCRIPTIONS: tuple[NumberDescription, ...] = (
+    NumberDescription[VolumeEvent](
         capability_fn=lambda caps: caps.settings.volume,
         value_fn=lambda e: e.volume,
         native_max_value_fn=lambda e: e.maximum,
@@ -46,24 +48,24 @@ ENTITY_DESCRIPTIONS: tuple[NgiotNumberEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: NgiotConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Add entities for passed config_entry in HA."""
     async_add_entities(
         get_supported_entities(
-            config_entry.runtime_data, NgiotNumber, ENTITY_DESCRIPTIONS
+            config_entry.runtime_data, Number, ENTITY_DESCRIPTIONS
         )
     )
 
 
-class NgiotNumber[EventT: Event](
-    NgiotDescriptionEntity[CapabilitySet[EventT, [int]]],
+class Number[EventT: Event](
+    DescriptionEntity[CapabilitySet[EventT, [int]]],
     NumberEntity,
 ):
     """Number entity."""
 
-    entity_description: NgiotNumberEntityDescription
+    entity_description: NumberDescription
 
     @override
     async def async_added_to_hass(self) -> None:

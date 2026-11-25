@@ -1,0 +1,16 @@
+reset_consumable:
+  target:
+    entity:
+      integration: deebot_ngiot
+      domain: vacuum
+  fields:
+    consumable:
+      required: true
+      selector:
+        select:
+          translation_key: consumable
+          options:
+            - sideBrush
+            - rollBrush
+            - filter
+            - unitCare

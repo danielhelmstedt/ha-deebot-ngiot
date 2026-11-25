@@ -8,15 +8,16 @@ from deebot_client.capabilities import Capabilities
 from deebot_client.device import Device
 from deebot_client.events import AvailabilityEvent
 from deebot_client.events.base import Event
-
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity, EntityDescription
+from homeassistant.helpers.entity import Entity as HAEntity
+from homeassistant.helpers.entity import EntityDescription
 
 from .const import DOMAIN
+from .controller import AccountController
 
 
-class NgiotEntity[CapabilityEntityT](Entity):
+class Entity[CapabilityEntityT](HAEntity):
     """Base entity of a device."""
 
     _attr_should_poll = False
@@ -92,7 +93,7 @@ class NgiotEntity[CapabilityEntityT](Entity):
             self._device.events.request_refresh(event_type)
 
 
-class NgiotDescriptionEntity[CapabilityEntityT](NgiotEntity[CapabilityEntityT]):
+class DescriptionEntity[CapabilityEntityT](Entity[CapabilityEntityT]):
     """Entity described by an entity description."""
 
     def __init__(
@@ -108,7 +109,21 @@ class NgiotDescriptionEntity[CapabilityEntityT](NgiotEntity[CapabilityEntityT]):
 
 
 @dataclass(kw_only=True, frozen=True)
-class NgiotCapabilityEntityDescription[CapabilityEntityT](EntityDescription):
+class CapabilityEntityDescription[CapabilityEntityT](EntityDescription):
     """Entity description with the capability it depends on."""
 
     capability_fn: Callable[[Capabilities], CapabilityEntityT | None]
+
+
+def get_supported_entities(
+    controller: AccountController,
+    entity_class: type[DescriptionEntity],
+    descriptions: tuple[CapabilityEntityDescription, ...],
+) -> list[Entity]:
+    """Return all supported entities for all devices."""
+    return [
+        entity_class(device, capability, description)
+        for device in controller.devices
+        for description in descriptions
+        if (capability := description.capability_fn(device.capabilities))
+    ]
